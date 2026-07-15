@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 
 namespace config {
-    inline int grid_size = 5;
-    inline sf::Vector2u window_size = {300, 300}; // Has to be square
-    inline sf::Vector2u cell_size = {window_size.x / grid_size, window_size.y / grid_size};
+    inline constexpr int initial_grid_size = 5;
+    inline constexpr sf::Vector2u window_size = {800, 800}; // Has to be square
+    inline constexpr int layer_amount = 5;
 }
