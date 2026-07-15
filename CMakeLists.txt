@@ -31,6 +31,7 @@ target_sources(main PRIVATE
 )
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(main PRIVATE cxx_std_17)
+target_compile_definitions(main PRIVATE _USE_MATH_DEFINES)
 target_link_libraries(main PRIVATE SFML::Graphics spdlog::spdlog)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT main)

@@ -16,17 +16,20 @@ float Lerp(float a, float b, float t) {
     return a + (b - a) * t;
 }
 
-float BiLerp(const std::array<float, 4>& values, const std::array<float, 3>& t) {
-    float lerp1 = Lerp(values[0], values[1], Fade(t[0]));
-    float lerp2 = Lerp(values[2], values[3], Fade(t[1]));
-    return Lerp(lerp1, lerp2, Fade(t[2]));
+float BiLerp(const std::array<float, 4>& values, float t1, float t2) {
+    t1 = Fade(t1);
+    t2 = Fade(t2);
+    float lerp1 = Lerp(values[0], values[1], t1);
+    float lerp2 = Lerp(values[2], values[3], t1);
+    return Lerp(lerp1, lerp2, t2);
 }
 
 std::vector<sf::Vector2f> GenerateVectors(int grid_size) {
     std::vector<sf::Vector2f> vectors;
+    vectors.reserve((grid_size + 1) * (grid_size + 1));
     for (int i = 0; i < (grid_size + 1) * (grid_size + 1); ++i) {
-        sf::Angle cur_angle = sf::radians(random_gen::GetFloat(0.0f, 2 * M_PI));
-        sf::Vector2 cur_vector = sf::Vector2f(1.0f, cur_angle);
+        sf::Angle cur_angle = sf::radians(random_gen::GetFloat(0.0f, 2.0f * static_cast<float>(M_PI)));
+        sf::Vector2f cur_vector = sf::Vector2f(1.0f, cur_angle);
         vectors.push_back(cur_vector);
     }
     return vectors;
@@ -34,15 +37,17 @@ std::vector<sf::Vector2f> GenerateVectors(int grid_size) {
 
 std::vector<float> GenerateOctave(int grid_size) {
     std::vector<sf::Vector2f> vectors = GenerateVectors(grid_size);
-    const sf::Vector2u cell_size = {config::window_size.x / grid_size, config::window_size.y / grid_size};
     std::vector<float> pixel_values;
+    pixel_values.reserve(config::window_size.x * config::window_size.y);
     for (int i = 0; i < config::window_size.y; ++i) {
-        const uint32_t cell_y = i / cell_size.y;
-        const float dy = static_cast<float>(i % cell_size.y) / cell_size.y;
+        const float grid_y = (static_cast<float>(i) / config::window_size.y) * grid_size;
+        const uint32_t cell_y = static_cast<uint32_t>(std::floor(grid_y));
+        const float dy = grid_y - cell_y;
 
         for (int j = 0; j < config::window_size.x; ++j) {
-            const uint32_t cell_x = j / cell_size.x;
-            const float dx = static_cast<float>(j % cell_size.x) / cell_size.x;
+            const float grid_x = (static_cast<float>(j) / config::window_size.x) * grid_size;
+            const uint32_t cell_x = static_cast<uint32_t>(std::floor(grid_x));
+            const float dx = grid_x - cell_x;
 
             std::array<sf::Vector2f, 4> vectors_to_pixel;
             vectors_to_pixel[0] = {dx, dy};
@@ -61,7 +66,7 @@ std::vector<float> GenerateOctave(int grid_size) {
                 dots[k] = vectors_to_pixel[k].dot(corner_vectors[k]);
             }
 
-            float pixel_value = 0.5f * (BiLerp(dots, {dx, dx, dy}) * M_SQRT1_2 + 1.0f);
+            float pixel_value = 0.5f * (BiLerp(dots, dx, dy) * M_SQRT2 + 1.0f);
             pixel_values.push_back(pixel_value);
         }
     }
@@ -71,11 +76,12 @@ std::vector<float> GenerateOctave(int grid_size) {
 std::vector<float> GeneratePerlinNoise() {
     std::vector<float> perlin_noise(config::window_size.x * config::window_size.y, 0.0f);
     for (int i = 0; i < config::layer_amount; ++i) {
-        if (config::initial_grid_size * (1 << i) > config::window_size.x || config::initial_grid_size * (1 << i) > config::window_size.y) {
+        const int grid_size = config::initial_grid_size * (1 << i);
+        if (grid_size > config::window_size.x || grid_size > config::window_size.y) {
             spdlog::warn("Perlin noise grid is bigger than window!");
             break;
         }
-        std::vector<float> layer = GenerateOctave(config::initial_grid_size * (1 << i));
+        std::vector<float> layer = GenerateOctave(grid_size);
         for (int j = 0; j < config::window_size.x * config::window_size.y; ++j) {
             perlin_noise[j] += layer[j] / (1 << i);
         }
